@@ -118,6 +118,11 @@ namespace MWWorld
         return mBaseNode;
     }
 
+    const SceneUtil::PositionAttitudeTransform* RefData::getBaseNode() const
+    {
+        return mBaseNode;
+    }
+
     int RefData::getCount() const
     {
         return mCount;
@@ -201,6 +206,11 @@ namespace MWWorld
     }
 
     CustomData *RefData::getCustomData()
+    {
+        return mCustomData;
+    }
+
+    const CustomData *RefData::getCustomData() const
     {
         return mCustomData;
     }
