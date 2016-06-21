@@ -16,7 +16,6 @@
 #include "steering.hpp"
 #include "movement.hpp"
 #include "character.hpp"
-
 #include "aicombataction.hpp"
 #include "combat.hpp"
 
@@ -107,6 +106,7 @@ namespace MWMechanics
         mActionCooldown(0),
         mStrength(),
         mForceNoShortcut(false),
+        mShortcutFailPos(),
         mLastActorPos(0,0,0),
         mMovement(){}    
 
@@ -260,6 +260,7 @@ namespace MWMechanics
 
         // Get weapon characteristics
         MWBase::World* world = MWBase::Environment::get().getWorld();
+        static const float fCombatDistance = world->getStore().get<ESM::GameSetting>().find("fCombatDistance")->getFloat();
         if (actorClass.hasInventoryStore(actor))
         {
             //Get weapon range
@@ -278,12 +279,12 @@ namespace MWMechanics
                 weapon = weaponSlot->get<ESM::Weapon>()->mBase;
                 weapRange = weapon->mData.mReach;
             }
-            weapRange *= 100.0f;
+            weapRange *= fCombatDistance;
         }
         else //is creature
         {
             weaptype = actorClass.getCreatureStats(actor).getDrawState() == DrawState_Spell ? WeapType_Spell : WeapType_HandToHand;
-            weapRange = 150.0f; //TODO: use true attack range (the same problem in Creature::hit)
+            weapRange = fCombatDistance;
         }
 
         bool distantCombat = false;
@@ -305,7 +306,6 @@ namespace MWMechanics
         else
         {
             distantCombat = (rangeAttack > 500);
-            weapRange = 150.f;
         }
 
         
@@ -688,7 +688,7 @@ ESM::Weapon::AttackType chooseBestAttack(const ESM::Weapon* weapon, MWMechanics:
         float roll = Misc::Rng::rollClosedProbability();
         if(roll <= 0.333f)  //side punch
         {
-            movement.mPosition[0] = Misc::Rng::rollClosedProbability() ? 1.0f : -1.0f;
+            movement.mPosition[0] = (Misc::Rng::rollClosedProbability() < 0.5f) ? 1.0f : -1.0f;
             movement.mPosition[1] = 0;
             attackType = ESM::Weapon::AT_Slash;
         }

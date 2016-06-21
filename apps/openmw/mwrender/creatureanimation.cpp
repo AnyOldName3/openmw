@@ -75,6 +75,7 @@ void CreatureWeaponAnimation::showCarriedLeft(bool show)
 
 void CreatureWeaponAnimation::updateParts()
 {
+    mAmmunition.reset();
     mWeapon.reset();
     mShield.reset();
 
@@ -105,7 +106,7 @@ void CreatureWeaponAnimation::updatePart(PartHolderPtr& scene, int slot)
     else
         bonename = "Shield Bone";
 
-    osg::ref_ptr<osg::Node> node = mResourceSystem->getSceneManager()->createInstance(item.getClass().getModel(item));
+    osg::ref_ptr<osg::Node> node = mResourceSystem->getSceneManager()->getInstance(item.getClass().getModel(item));
     osg::ref_ptr<osg::Node> attached = SceneUtil::attach(node, mObjectRoot, bonename, bonename);
     mResourceSystem->getSceneManager()->notifyAttached(attached);
 

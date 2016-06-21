@@ -8,19 +8,20 @@
 
 #include "../mwbase/world.hpp"
 #include "../mwbase/environment.hpp"
+
+#include "../mwworld/action.hpp"
 #include "../mwworld/class.hpp"
 #include "../mwworld/cellstore.hpp"
+
 #include "creaturestats.hpp"
 #include "movement.hpp"
-#include "../mwworld/action.hpp"
-
 #include "steering.hpp"
 #include "actorutil.hpp"
 #include "coordinateconverter.hpp"
 
 MWMechanics::AiPackage::~AiPackage() {}
 
-MWWorld::Ptr MWMechanics::AiPackage::getTarget()
+MWWorld::Ptr MWMechanics::AiPackage::getTarget() const
 {
     return MWWorld::Ptr();
 }
@@ -35,7 +36,22 @@ bool MWMechanics::AiPackage::followTargetThroughDoors() const
     return false;
 }
 
-MWMechanics::AiPackage::AiPackage() : mTimer(0.26f) { //mTimer starts at .26 to force initial pathbuild
+bool MWMechanics::AiPackage::canCancel() const
+{
+    return true;
+}
+
+bool MWMechanics::AiPackage::shouldCancelPreviousAi() const
+{
+    return true;
+}
+
+bool MWMechanics::AiPackage::getRepeat() const
+{
+    return false;
+}
+
+MWMechanics::AiPackage::AiPackage() : mTimer(0.26f), mStarted(false) { //mTimer starts at .26 to force initial pathbuild
 
 }
 
@@ -64,7 +80,13 @@ bool MWMechanics::AiPackage::pathTo(const MWWorld::Ptr& actor, ESM::Pathgrid::Po
     if(mTimer > 0.25)
     {
         const ESM::Cell *cell = actor.getCell()->getCell();
-        if (doesPathNeedRecalc(dest, cell)) { //Only rebuild path if it's moved
+        // If repeating an AI package (mStarted has been set to false again), build a new path if needed so package doesn't immediately end
+        if (!mStarted && distance(pos.pos, dest) > 10) {
+            mStarted = true;
+            mPathFinder.buildSyncedPath(pos.pos, dest, actor.getCell(), true); //Rebuild path, in case the target has moved
+            mPrevDest = dest;
+        }
+        else if (doesPathNeedRecalc(dest, cell)) { //Only rebuild path if it's moved
             mPathFinder.buildSyncedPath(pos.pos, dest, actor.getCell(), true); //Rebuild path, in case the target has moved
             mPrevDest = dest;
         }
@@ -84,7 +106,11 @@ bool MWMechanics::AiPackage::pathTo(const MWWorld::Ptr& actor, ESM::Pathgrid::Po
     /// Checks if you aren't moving; attempts to unstick you
     //************************
     if(mPathFinder.checkPathCompleted(pos.pos[0],pos.pos[1])) //Path finished?
+    {
+        // Reset mTimer so that path will be built right away when a package is repeated
+        mTimer = 0.26f;
         return true;
+    }
     else
     {
         evadeObstacles(actor, duration, pos);

@@ -4,19 +4,22 @@
 #include <MyGUI_ImageBox.h>
 #include <MyGUI_EditBox.h>
 
+#include <components/fallback/fallback.hpp>
+
 #include "../mwbase/windowmanager.hpp"
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
 #include "../mwbase/soundmanager.hpp"
 
 #include "../mwworld/class.hpp"
-#include "../mwworld/fallback.hpp"
 #include "../mwworld/esmstore.hpp"
 #include "../mwworld/cellstore.hpp"
 
 #include "../mwmechanics/creaturestats.hpp"
 #include "../mwmechanics/npcstats.hpp"
 #include "../mwmechanics/actorutil.hpp"
+
+#include "class.hpp"
 
 namespace MWGui
 {
@@ -153,7 +156,7 @@ namespace MWGui
                 cls = &*it;
         }
 
-        mClassImage->setImageTexture ("textures\\levelup\\" + cls->mId + ".dds");
+        setClassImage(mClassImage, cls->mId);
 
         int level = creatureStats.getLevel ()+1;
         mLevelText->setCaptionWithReplacing("#{sLevelUpMenu1} " + MyGUI::utility::toString(level));

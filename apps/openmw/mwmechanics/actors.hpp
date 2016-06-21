@@ -7,8 +7,9 @@
 #include <map>
 #include <list>
 
-#include "movement.hpp"
 #include "../mwbase/world.hpp"
+
+#include "movement.hpp"
 
 namespace MWWorld
 {
@@ -19,6 +20,7 @@ namespace MWWorld
 namespace MWMechanics
 {
     class Actor;
+    class CreatureStats;
 
     class Actors
     {
@@ -42,6 +44,8 @@ namespace MWMechanics
             void updateCrimePersuit (const MWWorld::Ptr& ptr, float duration);
 
             void killDeadActors ();
+
+            void purgeSpellEffects (int casterActorId);
 
         public:
 
@@ -111,6 +115,8 @@ namespace MWMechanics
 
             void getObjectsInRange(const osg::Vec3f& position, float radius, std::vector<MWWorld::Ptr>& out);
 
+            void cleanupSummonedCreature (CreatureStats& casterStats, int creatureActorId);
+
             ///Returns the list of actors which are siding with the given actor in fights
             /**ie AiFollow or AiEscort is active and the target is the actor **/
             std::list<MWWorld::Ptr> getActorsSidingWith(const MWWorld::Ptr& actor);
@@ -122,6 +128,9 @@ namespace MWMechanics
             ///Returns the list of actors which are fighting the given actor
             /**ie AiCombat is active and the target is the actor **/
             std::list<MWWorld::Ptr> getActorsFighting(const MWWorld::Ptr& actor);
+
+            /// Unlike getActorsFighting, also returns actors that *would* fight the given actor if they saw him.
+            std::list<MWWorld::Ptr> getEnemiesNearby(const MWWorld::Ptr& actor);
 
             void write (ESM::ESMWriter& writer, Loading::Listener& listener) const;
 

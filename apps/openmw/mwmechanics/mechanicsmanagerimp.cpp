@@ -11,18 +11,16 @@
 
 #include "../mwworld/esmstore.hpp"
 #include "../mwworld/inventorystore.hpp"
+#include "../mwworld/class.hpp"
+#include "../mwworld/player.hpp"
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
 #include "../mwbase/windowmanager.hpp"
 #include "../mwbase/dialoguemanager.hpp"
 
-#include "../mwworld/class.hpp"
-#include "../mwworld/player.hpp"
-
-#include "../mwmechanics/aicombat.hpp"
-#include "../mwmechanics/aipursue.hpp"
-
+#include "aicombat.hpp"
+#include "aipursue.hpp"
 #include "spellcasting.hpp"
 #include "autocalcspell.hpp"
 #include "npcstats.hpp"
@@ -581,7 +579,7 @@ namespace MWMechanics
         mUpdatePlayer = true;
     }
 
-    int MechanicsManager::getDerivedDisposition(const MWWorld::Ptr& ptr)
+    int MechanicsManager::getDerivedDisposition(const MWWorld::Ptr& ptr, bool addTemporaryDispositionChange)
     {
         const MWMechanics::NpcStats& npcSkill = ptr.getClass().getNpcStats(ptr);
         float x = static_cast<float>(npcSkill.getBaseDisposition());
@@ -653,6 +651,9 @@ namespace MWMechanics
 
         x += ptr.getClass().getCreatureStats(ptr).getMagicEffects().get(ESM::MagicEffect::Charm).getMagnitude();
 
+        if(addTemporaryDispositionChange)
+          x += MWBase::Environment::get().getDialogueManager()->getTemporaryDispositionChange();
+
         int effective_disposition = std::max(0,std::min(int(x),100));//, normally clamped to [0..100] when used
         return effective_disposition;
     }
@@ -667,10 +668,9 @@ namespace MWMechanics
         MWWorld::Ptr playerPtr = getPlayer();
         const MWMechanics::NpcStats &playerStats = playerPtr.getClass().getNpcStats(playerPtr);
 
-        // I suppose the temporary disposition change _has_ to be considered here,
+        // I suppose the temporary disposition change (second param to getDerivedDisposition()) _has_ to be considered here,
         // otherwise one would get different prices when exiting and re-entering the dialogue window...
-        int clampedDisposition = std::max(0, std::min(getDerivedDisposition(ptr)
-            + MWBase::Environment::get().getDialogueManager()->getTemporaryDispositionChange(),100));
+        int clampedDisposition = getDerivedDisposition(ptr);
         float a = static_cast<float>(std::min(playerStats.getSkill(ESM::Skill::Mercantile).getModified(), 100));
         float b = std::min(0.1f * playerStats.getAttribute(ESM::Attribute::Luck).getModified(), 10.f);
         float c = std::min(0.2f * playerStats.getAttribute(ESM::Attribute::Personality).getModified(), 10.f);
@@ -700,8 +700,7 @@ namespace MWMechanics
         return mActors.countDeaths (id);
     }
 
-    void MechanicsManager::getPersuasionDispositionChange (const MWWorld::Ptr& npc, PersuasionType type,
-        float currentTemporaryDispositionDelta, bool& success, float& tempChange, float& permChange)
+    void MechanicsManager::getPersuasionDispositionChange (const MWWorld::Ptr& npc, PersuasionType type, bool& success, float& tempChange, float& permChange)
     {
         const MWWorld::Store<ESM::GameSetting> &gmst =
             MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
@@ -717,7 +716,7 @@ namespace MWMechanics
         float playerRating1, playerRating2, playerRating3;
         getPersuasionRatings(playerStats, playerRating1, playerRating2, playerRating3, true);
 
-        int currentDisposition = std::min(100, std::max(0, int(getDerivedDisposition(npc) + currentTemporaryDispositionDelta)));
+        int currentDisposition = getDerivedDisposition(npc);
 
         float d = 1 - 0.02f * abs(currentDisposition - 50);
         float target1 = d * (playerRating1 - npcRating1 + 50);
@@ -927,7 +926,7 @@ namespace MWMechanics
             return true;
         }
 
-        if(MWMechanics::isPlayerInCombat()) {
+        if(MWBase::Environment::get().getWorld()->getPlayer().enemiesNearby()) {
             MWBase::Environment::get().getWindowManager()->messageBox("#{sNotifyMessage2}");
             return true;
         }
@@ -1330,7 +1329,7 @@ namespace MWMechanics
         {
             if ((*it)->getTypeId() == AiPackage::TypeIdCombat)
             {
-                MWWorld::Ptr target = static_cast<AiCombat*>(*it)->getTarget();
+                MWWorld::Ptr target = (*it)->getTarget();
                 if (!target.isEmpty() && target.getClass().isNpc())
                     isFightingNpc = true;
             }
@@ -1435,7 +1434,7 @@ namespace MWMechanics
             osg::Vec3f observerDir = (observer.getRefData().getBaseNode()->getAttitude() * osg::Vec3f(0,1,0));
 
             float angleRadians = std::acos(observerDir * vec / (observerDir.length() * vec.length()));
-            if (angleRadians < osg::DegreesToRadians(90.f))
+            if (angleRadians > osg::DegreesToRadians(90.f))
                 y = obsTerm * observerStats.getFatigueTerm() * fSneakNoViewMult;
             else
                 y = obsTerm * observerStats.getFatigueTerm() * fSneakViewMult;
@@ -1506,6 +1505,10 @@ namespace MWMechanics
         return mActors.getActorsFighting(actor);
     }
 
+    std::list<MWWorld::Ptr> MechanicsManager::getEnemiesNearby(const MWWorld::Ptr& actor) {
+        return mActors.getEnemiesNearby(actor);
+    }
+
     int MechanicsManager::countSavedGameRecords() const
     {
         return 1 // Death counter
@@ -1539,13 +1542,15 @@ namespace MWMechanics
     {
         mActors.clear();
         mStolenItems.clear();
+        mClassSelected = false;
+        mRaceSelected = false;
     }
 
     bool MechanicsManager::isAggressive(const MWWorld::Ptr &ptr, const MWWorld::Ptr &target)
     {
         int disposition = 50;
         if (ptr.getClass().isNpc())
-            disposition = getDerivedDisposition(ptr);
+            disposition = getDerivedDisposition(ptr, false);
 
         int fight = std::max(0, ptr.getClass().getCreatureStats(ptr).getAiSetting(CreatureStats::AI_Fight).getModified()
                 + static_cast<int>(getFightDistanceBias(ptr, target) + getFightDispositionBias(static_cast<float>(disposition))));
@@ -1556,7 +1561,7 @@ namespace MWMechanics
                     (target == getPlayer() &&
                      MWBase::Environment::get().getWorld()->getGlobalInt("pcknownwerewolf")))
             {
-                const ESM::GameSetting * iWerewolfFightMod = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().search("iWerewolfFightMod");
+                const ESM::GameSetting * iWerewolfFightMod = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().find("iWerewolfFightMod");
                 fight += iWerewolfFightMod->getInt();
             }
         }
@@ -1585,4 +1590,117 @@ namespace MWMechanics
     {
         return mActors.isReadyToBlock(ptr);
     }
+
+    void MechanicsManager::setWerewolf(const MWWorld::Ptr& actor, bool werewolf)
+    {
+        MWMechanics::NpcStats& npcStats = actor.getClass().getNpcStats(actor);
+
+        // The actor does not have to change state
+        if (npcStats.isWerewolf() == werewolf)
+            return;
+
+        MWWorld::Player* player = &MWBase::Environment::get().getWorld()->getPlayer();
+
+        if (actor == player->getPlayer())
+        {
+            if (werewolf)
+            {
+                player->saveSkillsAttributes();
+                player->setWerewolfSkillsAttributes();
+            }
+            else
+                player->restoreSkillsAttributes();
+        }
+
+        // Equipped items other than WerewolfRobe may reference bones that do not even
+        // exist with the werewolf object root, so make sure to unequip all items
+        // *before* we become a werewolf.
+        MWWorld::InventoryStore& invStore = actor.getClass().getInventoryStore(actor);
+        invStore.unequipAll(actor);
+
+        // Werewolfs can not cast spells, so we need to unset the prepared spell if there is one.
+        if (npcStats.getDrawState() == MWMechanics::DrawState_Spell)
+            npcStats.setDrawState(MWMechanics::DrawState_Nothing);
+
+        npcStats.setWerewolf(werewolf);
+
+        if(werewolf)
+        {
+            MWWorld::InventoryStore &inv = actor.getClass().getInventoryStore(actor);
+
+            inv.equip(MWWorld::InventoryStore::Slot_Robe, inv.ContainerStore::add("werewolfrobe", 1, actor), actor);
+        }
+        else
+        {
+            actor.getClass().getContainerStore(actor).remove("werewolfrobe", 1, actor);
+        }
+
+        if(actor == player->getPlayer())
+        {
+            MWBase::Environment::get().getWorld()->reattachPlayerCamera();
+
+            // Update the GUI only when called on the player
+            MWBase::WindowManager* windowManager = MWBase::Environment::get().getWindowManager();
+
+            if (werewolf)
+            {
+                windowManager->forceHide(MWGui::GW_Inventory);
+                windowManager->forceHide(MWGui::GW_Magic);
+            }
+            else
+            {
+                windowManager->unsetForceHide(MWGui::GW_Inventory);
+                windowManager->unsetForceHide(MWGui::GW_Magic);
+            }
+
+            windowManager->setWerewolfOverlay(werewolf);
+
+            // Witnesses of the player's transformation will make them a globally known werewolf
+            std::vector<MWWorld::Ptr> closeActors;
+            const MWWorld::Store<ESM::GameSetting>& gmst = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
+            getActorsInRange(actor.getRefData().getPosition().asVec3(), gmst.find("fAlarmRadius")->getFloat(), closeActors);
+
+            bool detected = false, reported = false;
+            for (std::vector<MWWorld::Ptr>::const_iterator it = closeActors.begin(); it != closeActors.end(); ++it)
+            {
+                if (*it == actor)
+                    continue;
+
+                if (!it->getClass().isNpc())
+                    continue;
+
+                if (MWBase::Environment::get().getWorld()->getLOS(*it, actor) && awarenessCheck(actor, *it))
+                    detected = true;
+                if (it->getClass().getCreatureStats(*it).getAiSetting(MWMechanics::CreatureStats::AI_Alarm).getModified() > 0)
+                    reported = true;
+            }
+
+            if (detected)
+            {
+                windowManager->messageBox("#{sWerewolfAlarmMessage}");
+                MWBase::Environment::get().getWorld()->setGlobalInt("pcknownwerewolf", 1);
+
+                if (reported)
+                {
+                    npcStats.setBounty(npcStats.getBounty()+
+                                       gmst.find("iWereWolfBounty")->getInt());
+                    windowManager->messageBox("#{sCrimeMessage}");
+                }
+            }
+        }
+    }
+
+    void MechanicsManager::applyWerewolfAcrobatics(const MWWorld::Ptr &actor)
+    {
+        const MWWorld::Store<ESM::GameSetting>& gmst = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
+        MWMechanics::NpcStats &stats = actor.getClass().getNpcStats(actor);
+
+        stats.getSkill(ESM::Skill::Acrobatics).setBase(gmst.find("fWerewolfAcrobatics")->getInt());
+    }
+
+    void MechanicsManager::cleanupSummonedCreature(const MWWorld::Ptr &caster, int creatureActorId)
+    {
+        mActors.cleanupSummonedCreature(caster.getClass().getCreatureStats(caster), creatureActorId);
+    }
+
 }

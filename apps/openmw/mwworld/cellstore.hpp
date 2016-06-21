@@ -31,6 +31,7 @@
 #include <components/esm/loadweap.hpp>
 #include <components/esm/loadnpc.hpp>
 #include <components/esm/loadmisc.hpp>
+#include <components/esm/loadbody.hpp>
 
 #include "../mwmechanics/pathgrid.hpp"  // TODO: maybe belongs in mwworld
 
@@ -97,6 +98,7 @@ namespace MWWorld
             CellRefList<ESM::Repair>            mRepairs;
             CellRefList<ESM::Static>            mStatics;
             CellRefList<ESM::Weapon>            mWeapons;
+            CellRefList<ESM::BodyPart>          mBodyParts;
 
             typedef std::map<LiveCellRefBase*, MWWorld::CellStore*> MovedRefTracker;
             // References owned by a different cell that have been moved here.
@@ -152,6 +154,7 @@ namespace MWWorld
                     forEachImp (visitor, mRepairs) &&
                     forEachImp (visitor, mStatics) &&
                     forEachImp (visitor, mWeapons) &&
+                    forEachImp (visitor, mBodyParts) &&
                     forEachImp (visitor, mCreatures) &&
                     forEachImp (visitor, mNpcs) &&
                     forEachImp (visitor, mCreatureLists);
@@ -201,6 +204,9 @@ namespace MWWorld
 
             State getState() const;
 
+            const std::vector<std::string>& getPreloadedIds() const;
+            ///< Get Ids of objects in this cell, only valid in State_Preloaded
+
             bool hasState() const;
             ///< Does this cell have state that needs to be stored in a saved game file?
 
@@ -243,6 +249,7 @@ namespace MWWorld
             /// Call visitor (MWWorld::Ptr) for each reference. visitor must return a bool. Returning
             /// false will abort the iteration.
             /// \note Prefer using forEachConst when possible.
+            /// \note Do not modify this cell (i.e. remove/add objects) during the forEach, doing this may result in unintended behaviour.
             /// \attention This function also lists deleted (count 0) objects!
             /// \return Iteration completed?
             template<class Visitor>
@@ -266,6 +273,7 @@ namespace MWWorld
 
             /// Call visitor (MWWorld::ConstPtr) for each reference. visitor must return a bool. Returning
             /// false will abort the iteration.
+            /// \note Do not modify this cell (i.e. remove/add objects) during the forEach, doing this may result in unintended behaviour.
             /// \attention This function also lists deleted (count 0) objects!
             /// \return Iteration completed?
             template<class Visitor>
@@ -288,6 +296,7 @@ namespace MWWorld
 
             /// Call visitor (ref) for each reference of given type. visitor must return a bool. Returning
             /// false will abort the iteration.
+            /// \note Do not modify this cell (i.e. remove/add objects) during the forEach, doing this may result in unintended behaviour.
             /// \attention This function also lists deleted (count 0) objects!
             /// \return Iteration completed?
             template <class T, class Visitor>
@@ -516,6 +525,13 @@ namespace MWWorld
     {
         mHasState = true;
         return mWeapons;
+    }
+
+    template<>
+    inline CellRefList<ESM::BodyPart>& CellStore::get<ESM::BodyPart>()
+    {
+        mHasState = true;
+        return mBodyParts;
     }
 
     bool operator== (const CellStore& left, const CellStore& right);

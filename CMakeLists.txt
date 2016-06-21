@@ -16,11 +16,16 @@ endif (APPLE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/)
 
+if (ANDROID)
+    set(CMAKE_FIND_ROOT_PATH ${OPENMW_DEPENDENCIES_DIR} "${CMAKE_FIND_ROOT_PATH}")
+    set (OSG_PLUGINS_DIR CACHE STRING "")
+endif()
+
 # Version
 message(STATUS "Configuring OpenMW...")
 
 set(OPENMW_VERSION_MAJOR 0)
-set(OPENMW_VERSION_MINOR 37)
+set(OPENMW_VERSION_MINOR 39)
 set(OPENMW_VERSION_RELEASE 0)
 
 set(OPENMW_VERSION_COMMITHASH "")
@@ -111,19 +116,40 @@ if (WIN32)
     option(USE_DEBUG_CONSOLE "whether a debug console should be enabled for debug builds, if false debug output is redirected to Visual Studio output" ON)
 endif()
 
-# We probably support older versions than this.
-cmake_minimum_required(VERSION 2.6)
+if (NOT BUILD_LAUNCHER AND NOT BUILD_OPENCS AND NOT BUILD_WIZARD)
+   set(USE_QT FALSE)
+else()
+   set(USE_QT TRUE)
+endif()
+
+# Dependencies
+if (USE_QT)
+    set(DESIRED_QT_VERSION 4 CACHE STRING "The QT version OpenMW should use (4 or 5)")
+    set_property(CACHE DESIRED_QT_VERSION PROPERTY STRINGS 4 5)
+    message(STATUS "Using Qt${DESIRED_QT_VERSION}")
+
+    if (DESIRED_QT_VERSION MATCHES 4)
+        find_package(Qt4 REQUIRED COMPONENTS QtCore QtGui QtNetwork QtOpenGL)
+    else()
+        find_package(Qt5Widgets REQUIRED)
+        find_package(Qt5Core REQUIRED)
+        find_package(Qt5Network REQUIRED)
+        find_package(Qt5OpenGL REQUIRED)
+    # Instruct CMake to run moc automatically when needed.
+    #set(CMAKE_AUTOMOC ON)
+    endif()
+endif()
+
+if (USE_QT AND DESIRED_QT_VERSION MATCHES 5)
+    # 2.8.11+ is required to make Qt5 happy and allow linking QtMain on Windows.
+    cmake_minimum_required(VERSION 2.8.11)
+else()
+    # We probably support older versions than this.
+    cmake_minimum_required(VERSION 2.6)
+endif()
 
 # Sound setup
-unset(FFMPEG_LIBRARIES CACHE)
-
-find_package(FFmpeg REQUIRED)
-
-set (FFMPEG_LIBRARIES ${FFMPEG_LIBRARIES} ${SWSCALE_LIBRARY} ${SWRESAMPLE_LIBRARIES})
-
-if ( NOT AVCODEC_FOUND OR NOT AVFORMAT_FOUND OR NOT AVUTIL_FOUND OR NOT SWSCALE_FOUND OR NOT SWRESAMPLE_FOUND)
-    message(FATAL_ERROR "FFmpeg component required, but not found!")
-endif()
+find_package(FFmpeg REQUIRED COMPONENTS AVCODEC AVFORMAT AVUTIL SWSCALE SWRESAMPLE)
 # Required for building the FFmpeg headers
 add_definitions(-D__STDC_CONSTANT_MACROS)
 
@@ -156,40 +182,16 @@ if (WIN32)
     add_definitions(-DNOMINMAX -DWIN32_LEAN_AND_MEAN)
 endif()
 
-if (ANDROID)
-    set(CMAKE_FIND_ROOT_PATH ${OPENMW_DEPENDENCIES_DIR} "${CMAKE_FIND_ROOT_PATH}")
-    set(OPENGL_ES TRUE CACHE BOOL "enable opengl es support for android" FORCE)
-endif (ANDROID)
+if (NOT WIN32 AND BUILD_WIZARD) # windows users can just run the morrowind installer
+    find_package(LIBUNSHIELD REQUIRED) # required only for non win32 when building openmw-wizard
+    set(OPENMW_USE_UNSHIELD TRUE)
+endif()
 
 option(OPENGL_ES "enable opengl es support" FALSE )
 
 if (OPENGL_ES)
     add_definitions(-DOPENGL_ES)
 endif(OPENGL_ES)
-
-if (NOT BUILD_LAUNCHER AND NOT BUILD_OPENCS AND NOT BUILD_WIZARD)
-   set(USE_QT FALSE)
-else()
-   set(USE_QT TRUE)
-endif()
- 
-# Dependencies
-if (USE_QT)
-    set(DESIRED_QT_VERSION 4 CACHE STRING "The QT version OpenMW should use (4 or 5)")
-    set_property(CACHE DESIRED_QT_VERSION PROPERTY STRINGS 4 5)
-    message(STATUS "Using Qt${DESIRED_QT_VERSION}")
-
-    if (DESIRED_QT_VERSION MATCHES 4)
-        find_package(Qt4 REQUIRED COMPONENTS QtCore QtGui QtNetwork QtOpenGL)
-    else()
-        find_package(Qt5Widgets REQUIRED)
-        find_package(Qt5Core REQUIRED)
-        find_package(Qt5Network REQUIRED)
-        find_package(Qt5OpenGL REQUIRED)
-    # Instruct CMake to run moc automatically when needed.
-    #set(CMAKE_AUTOMOC ON)
-    endif()
-endif()
 
 # Fix for not visible pthreads functions for linker with glibc 2.15
 if (UNIX AND NOT APPLE)
@@ -204,12 +206,6 @@ if(NOT HAVE_STDINT_H)
     message(FATAL_ERROR "stdint.h was not found" )
 endif()
 
-include (CheckIncludeFileCXX)
-check_include_file_cxx(unordered_map HAVE_UNORDERED_MAP)
-if (HAVE_UNORDERED_MAP)
-    add_definitions(-DHAVE_UNORDERED_MAP)
-endif ()
-
 
 set(BOOST_COMPONENTS system filesystem program_options thread)
 if(WIN32)
@@ -220,11 +216,7 @@ IF(BOOST_STATIC)
     set(Boost_USE_STATIC_LIBS   ON)
 endif()
 
-if (USE_QT)
-    set (OSG_QT osgQt)
-endif()
-
-find_package(OpenSceneGraph 3.2.0 REQUIRED osgDB osgViewer osgText osgGA osgAnimation osgParticle ${OSG_QT} osgUtil osgFX)
+find_package(OpenSceneGraph 3.3.4 REQUIRED osgDB osgViewer osgText osgGA osgAnimation osgParticle osgUtil osgFX)
 
 include_directories(${OPENSCENEGRAPH_INCLUDE_DIRS})
 
@@ -234,6 +226,7 @@ if(OSG_STATIC)
 
       # For now, users wishing to do a static build will need to pass the path to where the plugins reside
       # More clever logic would need to deduce the path, probably installed under <OpenSceneGraph>/lib/osgPlugins-<X.X.X>
+      include(FindPkgMacros)
       find_library(${PLUGIN_NAME}_LIBRARY_REL NAMES ${PLUGIN_NAME} HINTS ${OSG_PLUGIN_LIB_SEARCH_PATH})
       find_library(${PLUGIN_NAME}_LIBRARY_DBG NAMES ${PLUGIN_NAME_DBG} HINTS ${OSG_PLUGIN_LIB_SEARCH_PATH})
       make_library_set(${PLUGIN_NAME}_LIBRARY)
@@ -243,12 +236,6 @@ if(OSG_STATIC)
       endif()
 
       set(OPENSCENEGRAPH_LIBRARIES ${OPENSCENEGRAPH_LIBRARIES} ${${PLUGIN_NAME}_LIBRARY})
-   endmacro()
-
-   macro(use_static_osg_plugin_dep DEPENDENCY)
-      find_package(${DEPENDENCY} REQUIRED)
-
-      set(OPENSCENEGRAPH_LIBRARIES ${OPENSCENEGRAPH_LIBRARIES} ${${DEPENDENCY}_LIBRARIES})
    endmacro()
 
    add_definitions(-DOSG_LIBRARY_STATIC)
@@ -271,6 +258,11 @@ if(OSG_STATIC)
        JPEG # needed by osgdb_jpeg
        )
 
+   macro(use_static_osg_plugin_dep DEPENDENCY)
+      find_package(${DEPENDENCY} REQUIRED)
+
+      set(OPENSCENEGRAPH_LIBRARIES ${OPENSCENEGRAPH_LIBRARIES} ${${DEPENDENCY}_LIBRARIES})
+   endmacro()
    foreach(DEPENDENCY ${PLUGIN_DEPS_LIST})
       use_static_osg_plugin_dep(${DEPENDENCY})
    endforeach()
@@ -294,7 +286,7 @@ endif()
 find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 find_package(SDL2 REQUIRED)
 find_package(OpenAL REQUIRED)
-find_package(Bullet REQUIRED)
+find_package(Bullet 283 REQUIRED COMPONENTS BulletCollision LinearMath)
 
 include_directories("."
     SYSTEM
@@ -302,7 +294,7 @@ include_directories("."
     ${Boost_INCLUDE_DIR}
     ${MYGUI_INCLUDE_DIRS}
     ${OPENAL_INCLUDE_DIR}
-    ${BULLET_INCLUDE_DIRS}
+    ${Bullet_INCLUDE_DIRS}
 )
 
 link_directories(${SDL2_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${MYGUI_LIB_DIR})
@@ -369,21 +361,17 @@ endif()
 
 # CXX Compiler settings
 if (CMAKE_CXX_COMPILER_ID STREQUAL GNU OR CMAKE_CXX_COMPILER_ID STREQUAL Clang)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -std=c++98 -pedantic -Wno-long-long")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wundef -Wno-unused-parameter -std=c++98 -pedantic -Wno-long-long")
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL Clang AND NOT APPLE)
-        execute_process(COMMAND ${CMAKE_C_COMPILER} --version OUTPUT_VARIABLE CLANG_VERSION)
-        string(REGEX REPLACE ".*version ([0-9\\.]*).*" "\\1" CLANG_VERSION ${CLANG_VERSION})
-        if ("${CLANG_VERSION}" VERSION_GREATER 3.6 OR "${CLANG_VERSION}" VERSION_EQUAL 3.6)
+        if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 3.6 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 3.6)
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-potentially-evaluated-expression")
-        endif ("${CLANG_VERSION}" VERSION_GREATER 3.6 OR "${CLANG_VERSION}" VERSION_EQUAL 3.6)
-    endif(CMAKE_CXX_COMPILER_ID STREQUAL Clang AND NOT APPLE)
+        endif ()
+    endif()
 
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
-                OUTPUT_VARIABLE GCC_VERSION)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL GNU AND "${GCC_VERSION}" VERSION_GREATER 4.6 OR "${GCC_VERSION}" VERSION_EQUAL 4.6)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL GNU AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.6 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.6)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-parameter")
-    endif(CMAKE_CXX_COMPILER_ID STREQUAL GNU AND "${GCC_VERSION}" VERSION_GREATER 4.6 OR "${GCC_VERSION}" VERSION_EQUAL 4.6)
+    endif()
 elseif (MSVC)
     # Enable link-time code generation globally for all linking
     if (OPENMW_LTO_BUILD)
@@ -558,6 +546,9 @@ endif(WIN32)
 # Extern
 add_subdirectory (extern/osg-ffmpeg-videoplayer)
 add_subdirectory (extern/oics)
+if (USE_QT)
+    add_subdirectory (extern/osgQt)
+endif()
 
 # Components
 add_subdirectory (components)

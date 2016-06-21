@@ -366,7 +366,7 @@ namespace MWSound
         else
             filelist = mMusicFiles[mCurrentPlaylist];
 
-        if(!filelist.size())
+        if(filelist.empty())
             return;
 
         int i = Misc::Rng::rollDice(filelist.size());
@@ -837,7 +837,7 @@ namespace MWSound
         timePassed = 0.0f;
 
         // Make sure music is still playing
-        if(!isMusicPlaying())
+        if(!isMusicPlaying() && !mCurrentPlaylist.empty())
             startRandomTitle();
 
         Environment env = Env_Normal;
