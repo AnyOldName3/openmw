@@ -71,10 +71,14 @@ void ConfigurationManager::readConfiguration(boost::program_options::variables_m
 
 void ConfigurationManager::processPaths(Files::PathContainer& dataDirs, bool create)
 {
+    std::cout << "Entering: void ConfigurationManager::processPaths(Files::PathContainer& dataDirs, bool create)" << std::endl;
+    
     std::string path;
     for (Files::PathContainer::iterator it = dataDirs.begin(); it != dataDirs.end(); ++it)
     {
         path = it->string();
+
+        std::cout << it->string() << std::endl;
 
         // Check if path contains a token
         if (!path.empty() && *path.begin() == '?')
@@ -103,6 +107,8 @@ void ConfigurationManager::processPaths(Files::PathContainer& dataDirs, bool cre
             }
         }
 
+        std::cout << it->string() << std::endl;
+
         if (!boost::filesystem::is_directory(*it))
         {
             if (create)
@@ -119,6 +125,8 @@ void ConfigurationManager::processPaths(Files::PathContainer& dataDirs, bool cre
 
             (*it).clear();
         }
+
+        std::cout << it->string() << std::endl;
     }
 
     dataDirs.erase(std::remove_if(dataDirs.begin(), dataDirs.end(),
