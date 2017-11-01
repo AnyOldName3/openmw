@@ -11,6 +11,8 @@ namespace MWRender
         MWShadow();
 
         virtual void cull(osgUtil::CullVisitor& cv);
+
+        virtual void cullShadowNonReceivingScene(osgUtil::CullVisitor* cv) const;
     protected:
         osg::ref_ptr<osg::Camera> debugCamera;
 

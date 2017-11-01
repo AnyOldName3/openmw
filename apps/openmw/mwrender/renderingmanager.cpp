@@ -206,8 +206,8 @@ namespace MWRender
 
         osgShadow::ShadowSettings* settings = shadowedScene->getShadowSettings();
         settings->setLightNum(0);
-        settings->setCastsShadowTraversalMask(Mask_Scene|Mask_Actor|Mask_Player);
-        settings->setReceivesShadowTraversalMask(~0u);
+        settings->setCastsShadowTraversalMask(Mask_Scene|Mask_Actor|Mask_Player|Mask_Terrain);
+        settings->setReceivesShadowTraversalMask(~(Mask_Sky | Mask_Sun));
 
         //settings->setShadowMapProjectionHint(osgShadow::ShadowSettings::PERSPECTIVE_SHADOW_MAP);
         settings->setBaseShadowTextureUnit(1);
@@ -330,6 +330,9 @@ namespace MWRender
         mUniformNear = mRootNode->getOrCreateStateSet()->getUniform("near");
         mUniformFar = mRootNode->getOrCreateStateSet()->getUniform("far");
         updateProjectionMatrix();
+
+        for (int i = 0; i < sceneRoot->getNumChildren(); ++i)
+            sceneRoot->setNodeMask(sceneRoot->getNodeMask() | sceneRoot->getChild(i)->getNodeMask());
     }
 
     RenderingManager::~RenderingManager()

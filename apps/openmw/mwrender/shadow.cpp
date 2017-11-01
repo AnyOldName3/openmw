@@ -710,6 +710,24 @@ namespace MWRender
             decoratorStateGraph->setStateSet(selectStateSetForRenderingShadow(*vdd));
         }
 
+        cullShadowNonReceivingScene(&cv);
+
         // OSG_NOTICE<<"End of shadow setup Projection matrix "<<*cv.getProjectionMatrix()<<std::endl;
+    }
+
+    void MWShadow::cullShadowNonReceivingScene(osgUtil::CullVisitor* cv) const
+    {
+        OSG_INFO << "cullShadowNonReceivingScene()" << std::endl;
+
+        // record the traversal mask on entry so we can reapply it later.
+        unsigned int traversalMask = cv->getTraversalMask();
+
+        cv->setTraversalMask(traversalMask & ~_shadowedScene->getShadowSettings()->getReceivesShadowTraversalMask());
+
+        _shadowedScene->osg::Group::traverse(*cv);
+
+        cv->setTraversalMask(traversalMask);
+
+        return;
     }
 }
