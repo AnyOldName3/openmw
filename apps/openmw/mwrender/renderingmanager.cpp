@@ -330,7 +330,7 @@ namespace MWRender
         mUniformFar = mRootNode->getOrCreateStateSet()->getUniform("far");
         updateProjectionMatrix();
 
-        for (int i = 0; i < sceneRoot->getNumChildren(); ++i)
+        for (unsigned int i = 0; i < sceneRoot->getNumChildren(); ++i)
             sceneRoot->setNodeMask(sceneRoot->getNodeMask() | sceneRoot->getChild(i)->getNodeMask());
     }
 
