@@ -53,6 +53,11 @@ varying vec3 passNormal;
 		uniform int shadowTextureUnit@shadow_texture_unit_index;
 		varying vec4 shadowSpaceCoords@shadow_texture_unit_index;
 	@endforeach
+
+    uniform bool shadowMapMode;
+#if !PER_PIXEL_LIGHTING
+    varying float passAlpha;
+#endif //PPL
 #endif // SHADOWS
 
 #include "lighting.glsl"
@@ -101,6 +106,18 @@ void main(void)
 #if @specularMap
     specularMapUV = (gl_TextureMatrix[@specularMapUV] * gl_MultiTexCoord@specularMapUV).xy;
 #endif
+
+#if SHADOWS
+    if (shadowMapMode)
+    {
+        // We only care about the depth buffer so we skip the 'colouring in', which should be faster on many GPUs.
+#if !PER_PIXEL_LIGHTING
+        passAlpha = getAlpha(gl_Color);
+#endif
+        passColor = gl_Color;
+		return;
+    }
+#endif // SHADOWS
 
 #if !PER_PIXEL_LIGHTING
     lighting = doLighting(viewPos.xyz, viewNormal, gl_Color, shadowDiffuseLighting);

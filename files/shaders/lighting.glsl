@@ -72,3 +72,14 @@ vec3 getSpecular(vec3 viewNormal, vec3 viewDirection, float shininess, vec3 matS
     vec3 halfVec = normalize(lightDir - viewDirection);
     return pow(max(dot(viewNormal, halfVec), 0.0), 128) * gl_LightSource[0].specular.xyz * matSpec;
 }
+
+float getAlpha(vec4 vertexColor)
+{
+#if @colorMode == 3
+    return gl_FrontMaterial.diffuse.a;
+#elif @colorMode == 2
+    return vertexColor.a;
+#else
+    return gl_FrontMaterial.diffuse.a;
+#endif
+}

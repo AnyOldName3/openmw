@@ -58,10 +58,15 @@ varying vec3 passViewPos;
 varying vec3 passNormal;
 
 #if SHADOWS
-	@foreach shadow_texture_unit_index @shadow_texture_unit_list
-		uniform sampler2DShadow shadowTexture@shadow_texture_unit_index;
-		varying vec4 shadowSpaceCoords@shadow_texture_unit_index;
-	@endforeach
+    @foreach shadow_texture_unit_index @shadow_texture_unit_list
+        uniform sampler2DShadow shadowTexture@shadow_texture_unit_index;
+        varying vec4 shadowSpaceCoords@shadow_texture_unit_index;
+    @endforeach
+
+    uniform bool shadowMapMode;
+#if !PER_PIXEL_LIGHTING
+    varying float passAlpha;
+#endif //PPL
 #endif // SHADOWS
 
 #include "lighting.glsl"
@@ -103,6 +108,26 @@ void main()
 
 #endif
 
+#if SHADOWS
+    if (shadowMapMode)
+    {
+		// We only care about the depth buffer (which now contains the fragment) and the alpha, so we skip the 'colouring in', which should be faster on many GPUs.
+        gl_FragData[0].rgb = vec3(0.0);
+
+#if @diffuseMap
+        gl_FragData[0].a = texture2D(diffuseMap, adjustedDiffuseUV).a;
+#else
+        gl_FragData[0].a = 1.0;
+#endif
+#if !PER_PIXEL_LIGHTING
+        gl_FragData[0].a *= passAlpha;
+#else
+        gl_FragData[0].a *= getAlpha(passColor);
+#endif
+        return;
+    }
+#endif // SHADOWS
+
 #if @diffuseMap
     gl_FragData[0] = texture2D(diffuseMap, adjustedDiffuseUV);
 #else
@@ -122,11 +147,11 @@ void main()
     gl_FragData[0].xyz = mix(gl_FragData[0].xyz, decalTex.xyz, decalTex.a);
 #endif
 
-	float shadowing = 1.0;
+    float shadowing = 1.0;
 #if SHADOWS
-	@foreach shadow_texture_unit_index @shadow_texture_unit_list
-		shadowing *= shadow2DProj(shadowTexture@shadow_texture_unit_index, shadowSpaceCoords@shadow_texture_unit_index).r;
-	@endforeach
+    @foreach shadow_texture_unit_index @shadow_texture_unit_list
+        shadowing *= shadow2DProj(shadowTexture@shadow_texture_unit_index, shadowSpaceCoords@shadow_texture_unit_index).r;
+    @endforeach
 #endif // SHADOWS
 
 #if !PER_PIXEL_LIGHTING

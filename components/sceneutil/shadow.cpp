@@ -822,6 +822,13 @@ namespace SceneUtil
         // OSG_NOTICE<<"End of shadow setup Projection matrix "<<*cv.getProjectionMatrix()<<std::endl;
     }
 
+    void SceneUtil::MWShadow::createShaders()
+    {
+        ViewDependentShadowMap::createShaders();
+
+        _shadowCastingStateSet->addUniform(new osg::Uniform("shadowMapMode", true));
+    }
+
     Shader::ShaderManager::DefineMap MWShadow::getShadowDefines()
     {
         if (!enableShadows)

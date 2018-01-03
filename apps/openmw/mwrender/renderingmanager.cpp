@@ -318,6 +318,8 @@ namespace MWRender
         mUniformNear = mRootNode->getOrCreateStateSet()->getUniform("near");
         mUniformFar = mRootNode->getOrCreateStateSet()->getUniform("far");
         updateProjectionMatrix();
+
+        mRootNode->getOrCreateStateSet()->addUniform(new osg::Uniform("shadowMapMode", false));
     }
 
     RenderingManager::~RenderingManager()

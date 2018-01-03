@@ -23,6 +23,8 @@ namespace SceneUtil
 
         virtual Shader::ShaderManager::DefineMap getShadowsDisabledDefines();
     protected:
+        virtual void createShaders() override;
+
         const int debugTextureUnit;
 
         std::vector<osg::ref_ptr<osg::Camera>> debugCameras;
