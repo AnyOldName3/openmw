@@ -103,6 +103,7 @@ namespace Shader
         if (mAllowedToModifyStateSets)
             writableStateSet = node.getStateSet();
         const osg::StateSet::TextureAttributeList& texAttributes = stateset->getTextureAttributeList();
+        int diffuseMapUnit = -1;
         if (!texAttributes.empty())
         {
             const osg::Texture* diffuseMap = NULL;
@@ -214,7 +215,15 @@ namespace Shader
                     mRequirements.back().mShaderRequired = true;
                 }
             }
+
+            if (diffuseMap)
+                diffuseMapUnit = 0; // It seems like this can never not be 0, so we don't have to work it out 'properly'
         }
+
+        if (!writableStateSet)
+            writableStateSet = getWritableStateSet(node);
+
+        writableStateSet->addUniform(new osg::Uniform("diffuseMapUVIndex", diffuseMapUnit));
 
         const osg::StateSet::AttributeList& attributes = stateset->getAttributeList();
         for (osg::StateSet::AttributeList::const_iterator it = attributes.begin(); it != attributes.end(); ++it)

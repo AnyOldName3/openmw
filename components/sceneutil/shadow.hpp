@@ -15,7 +15,7 @@ namespace SceneUtil
 
         static void disableShadowsForStateSet(osg::ref_ptr<osg::StateSet> stateSet);
 
-        MWShadow();
+        MWShadow(Shader::ShaderManager &shaderManager);
 
         virtual void cull(osgUtil::CullVisitor& cv) override;
 
@@ -30,6 +30,8 @@ namespace SceneUtil
         osg::ref_ptr<osg::Program> debugProgram;
 
         std::vector<osg::ref_ptr<osg::Node>> debugGeometry;
+
+        osg::ref_ptr<osg::Program> castingProgram;
 
         const int numberOfShadowMapsPerLight;
         const bool enableShadows;

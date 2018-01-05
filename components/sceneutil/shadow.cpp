@@ -87,9 +87,10 @@ namespace SceneUtil
             stateset->setTextureAttributeAndModes(i, fakeShadowMapTexture, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
     }
 
-    MWShadow::MWShadow() : enableShadows(Settings::Manager::getBool("enable shadows", "Shadows")),
+    MWShadow::MWShadow(Shader::ShaderManager &shaderManager) : enableShadows(Settings::Manager::getBool("enable shadows", "Shadows")),
         numberOfShadowMapsPerLight(Settings::Manager::getInt("number of shadow maps", "Shadows")),
         baseShadowTextureUnit(8 - numberOfShadowMapsPerLight),
+        castingProgram(new osg::Program),
         debugHud(Settings::Manager::getBool("enable debug hud", "Shadows")),
         debugProgram(new osg::Program), debugTextureUnit(0)
     {
@@ -119,6 +120,9 @@ namespace SceneUtil
                 stateSet->addUniform(textureUniform.get());
             }
         }
+
+        castingProgram->addShader(shaderManager.getShader("shadow_casting_vertex.glsl", Shader::ShaderManager::DefineMap(), osg::Shader::VERTEX));
+        castingProgram->addShader(shaderManager.getShader("shadow_casting_fragment.glsl", Shader::ShaderManager::DefineMap(), osg::Shader::FRAGMENT));
     }
     
     class VDSMCameraCullCallback : public osg::NodeCallback
@@ -773,6 +777,8 @@ namespace SceneUtil
 
                 // 4.3 traverse RTT camera
                 //
+
+                _shadowCastingStateSet->setAttributeAndModes(castingProgram, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
 
                 cv.pushStateSet(_shadowCastingStateSet.get());
 

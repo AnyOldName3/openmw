@@ -213,7 +213,7 @@ namespace MWRender
             shadowCastingTraversalMask |= Mask_Terrain;
         SceneUtil::MWShadow::setupShadowSettings(shadowedScene->getShadowSettings(), shadowCastingTraversalMask);
         
-        SceneUtil::MWShadow* tech = new SceneUtil::MWShadow();
+        SceneUtil::MWShadow* tech = new SceneUtil::MWShadow(resourceSystem->getSceneManager()->getShaderManager());
         shadowedScene->setShadowTechnique(tech);
 
         shadowedScene->addChild(sceneRoot);

@@ -16,6 +16,8 @@ set(SHADER_FILES
     terrain_fragment.glsl
     lighting.glsl
     parallax.glsl
+    shadow_casting_vertex.glsl
+    shadow_casting_fragment.glsl
 )
 
 copy_all_resource_files(${CMAKE_CURRENT_SOURCE_DIR} ${OPENMW_SHADERS_ROOT} ${DDIRRELATIVE} "${SHADER_FILES}")
