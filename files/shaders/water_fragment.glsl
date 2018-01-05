@@ -144,10 +144,12 @@ uniform vec3 nodePosition;
 uniform float rainIntensity;
 
 #if SHADOWS
-	@foreach shadow_texture_unit_index @shadow_texture_unit_list
-		uniform sampler2DShadow shadowTexture@shadow_texture_unit_index;
-		varying vec4 shadowSpaceCoords@shadow_texture_unit_index;
-	@endforeach
+    @foreach shadow_texture_unit_index @shadow_texture_unit_list
+        uniform sampler2DShadow shadowTexture@shadow_texture_unit_index;
+        varying vec4 shadowSpaceCoords@shadow_texture_unit_index;
+    @endforeach
+
+    uniform bool shadowMapMode;
 #endif // SHADOWS
 
 float frustumDepth;
@@ -161,22 +163,25 @@ float linearizeDepth(float depth)  // takes <0,1> non-linear depth value and ret
 
 void main(void)
 {
+#if SHADOWS
+    if (shadowMapMode)
+        discard;
+
+    float shadowing = 1.0;
+
+    @foreach shadow_texture_unit_index @shadow_texture_unit_list
+        shadowing *= shadow2DProj(shadowTexture@shadow_texture_unit_index, shadowSpaceCoords@shadow_texture_unit_index).r;
+    @endforeach
+
+    float shadow = shadowing;
+#else // NOT SHADOWS
+    float shadow = 1.0;
+#endif // SHADOWS
+
     frustumDepth = abs(far - near);
     vec3 worldPos = position.xyz + nodePosition.xyz;
     vec2 UV = worldPos.xy / (8192.0*5.0) * 3.0;
     UV.y *= -1.0;
-
-#if SHADOWS
-	float shadowing = 1.0;
-
-	@foreach shadow_texture_unit_index @shadow_texture_unit_list
-		shadowing *= shadow2DProj(shadowTexture@shadow_texture_unit_index, shadowSpaceCoords@shadow_texture_unit_index).r;
-	@endforeach
-
-	float shadow = shadowing;
-#else // NOT SHADOWS
-	float shadow = 1.0;
-#endif // SHADOWS
 
     vec2 screenCoords = screenCoordsPassthrough.xy / screenCoordsPassthrough.z;
     screenCoords.y = (1.0-screenCoords.y);
