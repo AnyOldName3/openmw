@@ -462,6 +462,8 @@ void Water::updateWaterMaterial()
         createSimpleWaterStateSet(mWaterGeom, mFallback->getFallbackFloat("Water_World_Alpha"));
 
     updateVisible();
+
+    mWaterGeom->getOrCreateStateSet()->addUniform(new osg::Uniform("diffuseMapUVIndex", -1));
 }
 
 void Water::createSimpleWaterStateSet(osg::Node* node, float alpha)

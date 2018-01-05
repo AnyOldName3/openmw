@@ -122,6 +122,7 @@ namespace Terrain
 
                 stateset->setAttributeAndModes(shaderManager->getProgram(vertexShader, fragmentShader));
                 stateset->addUniform(new osg::Uniform("colorMode", 2));
+                stateset->addUniform(new osg::Uniform("diffuseMapUVIndex", 0));
             }
             else
             {
