@@ -28,12 +28,10 @@ varying vec3 passViewPos;
 varying vec3 passNormal;
 
 #if SHADOWS
-    @foreach shadow_texture_unit_index @shadow_texture_unit_list
-        uniform sampler2DShadow shadowTexture@shadow_texture_unit_index;
-        varying vec4 shadowSpaceCoords@shadow_texture_unit_index;
-    @endforeach
-
-    uniform bool shadowMapMode;
+	@foreach shadow_texture_unit_index @shadow_texture_unit_list
+		uniform sampler2DShadow shadowTexture@shadow_texture_unit_index;
+		varying vec4 shadowSpaceCoords@shadow_texture_unit_index;
+	@endforeach
 #endif // SHADOWS
 
 #include "lighting.glsl"
@@ -41,14 +39,6 @@ varying vec3 passNormal;
 
 void main()
 {
-#if SHADOWS
-    if (shadowMapMode)
-    {
-        // Terrain is always opaque, so we need never do anything complicated in shadow map mode
-        gl_FragData[0] = vec4(1.0);
-    }
-#endif // SHADOWS
-
     vec2 adjustedUV = (gl_TextureMatrix[0] * vec4(uv, 0.0, 1.0)).xy;
 
 #if @normalMap
@@ -84,11 +74,11 @@ void main()
     gl_FragData[0].a *= texture2D(blendMap, blendMapUV).a;
 #endif
 
-    float shadowing = 1.0;
+	float shadowing = 1.0;
 #if SHADOWS
-    @foreach shadow_texture_unit_index @shadow_texture_unit_list
-        shadowing *= shadow2DProj(shadowTexture@shadow_texture_unit_index, shadowSpaceCoords@shadow_texture_unit_index).r;
-    @endforeach
+	@foreach shadow_texture_unit_index @shadow_texture_unit_list
+		shadowing *= shadow2DProj(shadowTexture@shadow_texture_unit_index, shadowSpaceCoords@shadow_texture_unit_index).r;
+	@endforeach
 #endif // SHADOWS
 
 #if !PER_PIXEL_LIGHTING
