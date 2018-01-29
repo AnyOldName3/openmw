@@ -371,7 +371,7 @@ namespace SceneUtil
             _shadowedScene->osg::Group::traverse(cv);
             return;
         }
-        
+
         OSG_INFO << std::endl << std::endl << "ViewDependentShadowMap::cull(osg::CullVisitor&" << &cv << ")" << std::endl;
 
         if (!_shadowCastingStateSet)
@@ -445,11 +445,24 @@ namespace SceneUtil
 
         // clamp the minZNear and maxZFar to those provided by ShadowSettings
         maxZFar = osg::minimum(settings->getMaximumShadowMapDistance(), maxZFar);
-        if (minZNear>maxZFar) minZNear = maxZFar*settings->getMinimumShadowMapNearFarRatio();
+        if (minZNear > maxZFar) minZNear = maxZFar*settings->getMinimumShadowMapNearFarRatio();
 
         //OSG_NOTICE<<"maxZFar "<<maxZFar<<std::endl;
 
         Frustum frustum(&cv, minZNear, maxZFar);
+
+        double reducedNear, reducedFar;
+        if (cv.getComputeNearFarMode() != osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR)
+        {
+            reducedNear = osg::maximum<double>(cv.getCalculatedNearPlane(), minZNear);
+            reducedFar = osg::minimum<double>(cv.getCalculatedFarPlane(), maxZFar);
+        }
+        else
+        {
+            reducedNear = minZNear;
+            reducedFar = maxZFar;
+        }
+        //std::cout << "Pre reduction: near: " << reducedNear << ", far: " << reducedFar << std::endl;
 
         // return compute near far mode back to it's original settings
         cv.setComputeNearFarMode(cachedNearFarMode);
@@ -510,11 +523,6 @@ namespace SceneUtil
 
             // if we are using multiple shadow maps and CastShadowTraversalMask is being used
             // traverse the scene to compute the extents of the objects
-            double reducedNear = osg::maximum<double>(cv.getCalculatedNearPlane(), minZNear);
-            double reducedFar = osg::minimum<double>(cv.getCalculatedFarPlane(), maxZFar);
-
-            //std::cout << "Pre reduction: near: " << reducedNear << ", far: " << reducedFar << std::endl;
-            
             if (/*numShadowMapsPerLight>1 &&*/ _shadowedScene->getCastsShadowTraversalMask() != 0xffffffff)
             {
                 // osg::ElapsedTime timer;
