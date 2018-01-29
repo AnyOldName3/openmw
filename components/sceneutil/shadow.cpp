@@ -1,5 +1,7 @@
 #include "shadow.hpp"
 
+#include <Windows.h>
+
 #include <osgShadow/ShadowedScene>
 #include <osg/CullFace>
 #include <osg/Geode>
@@ -508,6 +510,11 @@ namespace SceneUtil
 
             // if we are using multiple shadow maps and CastShadowTraversalMask is being used
             // traverse the scene to compute the extents of the objects
+            double reducedNear = osg::maximum<double>(cv.getCalculatedNearPlane(), minZNear);
+            double reducedFar = osg::minimum<double>(cv.getCalculatedFarPlane(), maxZFar);
+
+            //std::cout << "Pre reduction: near: " << reducedNear << ", far: " << reducedFar << std::endl;
+            
             if (/*numShadowMapsPerLight>1 &&*/ _shadowedScene->getCastsShadowTraversalMask() != 0xffffffff)
             {
                 // osg::ElapsedTime timer;
@@ -544,7 +551,35 @@ namespace SceneUtil
                     double yMid = (clsb._bb.yMin() + clsb._bb.yMax())*0.5f;
                     double yRange = (clsb._bb.yMax() - clsb._bb.yMin());
 
-                    // OSG_NOTICE<<"  xMid="<<xMid<<", yMid="<<yMid<<", xRange="<<xRange<<", yRange="<<yRange<<std::endl;
+                    if (0)//time(0) % 2)
+                    {
+                        yRange = 2.0;
+                        yMid = 0.0;
+                    }
+                    else
+                    {
+                        // DON'T DELETE THIS IF IT STARTS WORKING
+                        osg::Matrixd cornerConverter = osg::Matrixd::inverse(projectionMatrix) * osg::Matrixd::inverse(viewMatrix) * *cv.getModelViewMatrix();
+
+                        double minZ = DBL_MAX;
+                        double maxZ = -DBL_MAX;
+                        for (unsigned int i = 0; i < 8; i++)
+                        {
+                            osg::Vec3 corner = clsb._bb.corner(i);
+                            corner = corner * cornerConverter;
+
+                            maxZ = osg::maximum<double>(maxZ, -corner.z());
+                            minZ = osg::minimum<double>(minZ, -corner.z());
+                            //std::cout << corner.z() << std::endl;
+                        }
+                        //std::cout << minZ << ", " << maxZ << std::endl;
+                        reducedNear = osg::maximum<double>(reducedNear, minZ);
+                        reducedFar = osg::minimum<double>(reducedFar, maxZ);
+
+                        //std::cout << "Post reduction: near: " << reducedNear << ", far: " << reducedFar << std::endl;
+                    }
+
+                    //std::cout<<"  xMid="<<xMid<<", yMid="<<yMid<<", xRange="<<xRange<<", yRange="<<yRange<<std::endl;
 
                     projectionMatrix =
                         projectionMatrix *
@@ -678,9 +713,14 @@ namespace SceneUtil
 #else
                     double r_start, r_end;
 
+                    double minNFRatio = (((GetTickCount64() / 100) * 100) % 10000) / 10000.0;
+                    settings->setMinimumShadowMapNearFarRatio(minNFRatio);
+                    std::cout << minNFRatio << std::endl;
+
                     // split system based on the original Parallel Split Shadow Maps paper.
-                    double n = (frustum.eye - frustum.centerNearPlane).length();
-                    double f = (frustum.eye - frustum.centerFarPlane).length();
+                    double n = reducedNear;
+                    double f = reducedFar;
+                    //std::cout << "Used: near: " << n << ", far: " << f << std::endl;
                     double i = double(sm_i);
                     double m = double(numShadowMapsPerLight);
                     double ratio = Settings::Manager::getFloat("split point uniform logarithmic ratio", "Shadows");
