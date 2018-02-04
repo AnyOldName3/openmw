@@ -1,6 +1,6 @@
 #include "shadow.hpp"
 
-#include <Windows.h>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <osgShadow/ShadowedScene>
 #include <osg/CullFace>
@@ -559,7 +559,7 @@ namespace SceneUtil
                     double yMid = (clsb._bb.yMin() + clsb._bb.yMax())*0.5f;
                     double yRange = (clsb._bb.yMax() - clsb._bb.yMin());
 
-                    if (0)//time(0) % 2)
+                    if (boost::posix_time::second_clock::local_time().time_of_day().total_seconds() % 2)
                     {
                         yRange = 2.0;
                         yMid = 0.0;
@@ -721,7 +721,8 @@ namespace SceneUtil
 #else
                     double r_start, r_end;
 
-                    double minNFRatio = (((GetTickCount64() / 100) * 100) % 10000) / 10000.0;
+                    long milliseconds = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
+                    double minNFRatio = ((((milliseconds % 20000) / 2000) * 1000 + milliseconds % 1000) / 100) / 10.0;
                     settings->setMinimumShadowMapNearFarRatio(minNFRatio);
                     std::cout << minNFRatio << std::endl;
 
