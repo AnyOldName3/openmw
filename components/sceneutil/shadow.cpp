@@ -492,6 +492,8 @@ namespace SceneUtil
             numShadowMapsPerLight = 2;
         }*/
 
+        double localTime = fmod(double(boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds()), duration);
+
         LightDataList& pll = vdd->getLightDataList();
         for (LightDataList::iterator itr = pll.begin();
             itr != pll.end();
@@ -561,7 +563,7 @@ namespace SceneUtil
                     double yMid = (clsb._bb.yMin() + clsb._bb.yMax())*0.5f;
                     double yRange = (clsb._bb.yMax() - clsb._bb.yMin());
 
-                    if (boost::posix_time::second_clock::local_time().time_of_day().total_seconds() % 2)
+                    if (int(localTime * double(2 * numberOfModeToggles) / duration) % 2)
                     {
                         yRange = 2.0;
                         yMid = 0.0;
@@ -723,8 +725,17 @@ namespace SceneUtil
 #else
                     double r_start, r_end;
 
-                    long milliseconds = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
-                    double minNFRatio = ((((milliseconds % 20000) / 2000) * 1000 + milliseconds % 1000) / 100) / 10.0;
+
+                    double perModeToggleRange = (maxNF - minNF) / numberOfModeToggles;
+                    int modeToggleIndex = int(localTime * double(numberOfModeToggles) / duration);
+                    double step = perModeToggleRange / stepsPerModeToggle;
+                    double modeToggleDuration = duration / (2.0 * numberOfModeToggles);
+                    double modeToggleTime = fmod(localTime, modeToggleDuration);
+                    int stepIndex = modeToggleTime * stepsPerModeToggle / modeToggleDuration;
+
+                    //std::cout << "localTime: " << localTime << ", perModeToggleRange: " << perModeToggleRange << ", modeToggleDuration: " << modeToggleDuration << ", modeToggleTime: " << modeToggleTime << ", modeToggleIndex: " << modeToggleIndex << ", step: " << step << ", stepIndex: " << stepIndex << std::endl;
+
+                    double minNFRatio = minNF + modeToggleIndex * perModeToggleRange + stepIndex * step;
                     settings->setMinimumShadowMapNearFarRatio(minNFRatio);
                     std::cout << minNFRatio << std::endl;
 

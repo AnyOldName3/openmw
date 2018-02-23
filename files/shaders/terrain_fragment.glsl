@@ -99,4 +99,8 @@ void main()
 
     float fogValue = clamp((depth - gl_Fog.start) * gl_Fog.scale, 0.0, 1.0);
     gl_FragData[0].xyz = mix(gl_FragData[0].xyz, gl_Fog.color.xyz, fogValue);
+
+	gl_FragData[0].x += 0.25 * (1.0 - shadow2DProj(shadowTexture0, shadowSpaceCoords0).r);
+	gl_FragData[0].y += 0.25 * (1.0 - shadow2DProj(shadowTexture1, shadowSpaceCoords1).r);
+	gl_FragData[0].z += 0.25 * (1.0 - shadow2DProj(shadowTexture2, shadowSpaceCoords2).r);
 }

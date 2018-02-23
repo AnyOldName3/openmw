@@ -65,6 +65,13 @@ namespace SceneUtil
         const bool debugHud;
 
         const int baseShadowTextureUnit;
+
+        // Minimum Near Far Ratio tuning parameters
+        double minNF = 0.0;
+        double maxNF = 1.0;
+        int numberOfModeToggles = 5;
+        double duration = 20000.0; // milliseconds
+        int stepsPerModeToggle = 10;
     };
 }
 
