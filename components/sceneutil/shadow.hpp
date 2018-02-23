@@ -67,10 +67,15 @@ namespace SceneUtil
         const int baseShadowTextureUnit;
 
         // Minimum Near Far Ratio tuning parameters
+        // The minimum value for minimum lispsm near far ratio to try
         double minNF = 0.0;
+        // The maximum value for minimum lispsm near far ratio to try
         double maxNF = 1.0;
+        // The number of times to switch the CLSB on and off. When it's off, issues with lispsm transformations are less likely, so you can see an approximation of what something is supposed to look like, but in the absence of lispsm issues, it should always produce better results when on.
         int numberOfModeToggles = 5;
+        // The time period over which to change from minimum to maximum
         double duration = 20000.0; // milliseconds
+        // The number of subdivisions for the range of candidate values per time the CLSB is toggled
         int stepsPerModeToggle = 10;
     };
 }
