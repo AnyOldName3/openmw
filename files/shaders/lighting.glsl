@@ -38,13 +38,14 @@ vec4 doLighting(vec3 viewPos, vec3 viewNormal, vec4 vertexColor, out vec3 shadow
     lightResult.xyz += ambientLight + diffuseLight * shadowing;
 #else
     shadowDiffuse = diffuseLight;
-	lightResult.xyz += ambientLight;
+	lightResult.xyz = 0;
 #endif
-    for (int i=1; i<MAX_LIGHTS; ++i)
+    for (int i=0; i<MAX_LIGHTS; ++i)
     {
         perLight(ambientLight, diffuseLight, i, viewPos, viewNormal, diffuse, ambient);
         lightResult.xyz += ambientLight + diffuseLight;
     }
+	lightResult.xyz -= shadowDiffuse
 
     lightResult.xyz += gl_LightModel.ambient.xyz * ambient;
 
