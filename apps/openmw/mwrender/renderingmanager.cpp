@@ -466,7 +466,10 @@ namespace MWRender
         if (enabled)
             mShadowManager->enableOutdoorMode();
         else
+        {
             mShadowManager->enableIndoorMode();
+            mSunLight->setPosition(osg::Vec4(0.3, -0.268, 1.0, 0));
+        }
     }
 
     bool RenderingManager::toggleRenderMode(RenderMode mode)
