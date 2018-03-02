@@ -468,7 +468,7 @@ namespace MWRender
         else
         {
             mShadowManager->enableIndoorMode();
-            mSunLight->setPosition(osg::Vec4(0.3, -0.268, 1.0, 0));
+            mSunLight->setPosition(osg::Vec4(0.0, 0.0, 1.0, 0));
         }
     }
 
