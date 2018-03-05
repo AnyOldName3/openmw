@@ -100,9 +100,16 @@ void main()
     float fogValue = clamp((depth - gl_Fog.start) * gl_Fog.scale, 0.0, 1.0);
     gl_FragData[0].xyz = mix(gl_FragData[0].xyz, gl_Fog.color.xyz, fogValue);
 
-#if 1 // change to zero if not using exactly three shadow maps
-	gl_FragData[0].x += 0.25 * (1.0 - shadow2DProj(shadowTexture0, shadowSpaceCoords0).r);
-	gl_FragData[0].y += 0.25 * (1.0 - shadow2DProj(shadowTexture1, shadowSpaceCoords1).r);
-	gl_FragData[0].z += 0.25 * (1.0 - shadow2DProj(shadowTexture2, shadowSpaceCoords2).r);
-#endif
+	float shadowiness = 0.0;
+	float colourIndex = 0.0;
+	@foreach shadow_texture_unit_index @shadow_texture_unit_list
+		shadowiness = 0.25 * (1.0 - shadow2DProj(shadowTexture@shadow_texture_unit_index, shadowSpaceCoords@shadow_texture_unit_index).r);
+		colourIndex = mod(@shadow_texture_unit_index.0, 3.0);
+		if (colourIndex < 1.0)
+			gl_FragData[0].x += shadowiness;
+		else if (colourIndex < 2.0)
+			gl_FragData[0].y += shadowiness;
+		else
+			gl_FragData[0].z += shadowiness;
+	@endforeach
 }
