@@ -245,7 +245,7 @@ namespace MWRender
         int indoorShadowCastingTraversalMask = shadowCastingTraversalMask;
         if (Settings::Manager::getBool("object shadows", "Shadows"))
             shadowCastingTraversalMask |= Mask_Object;
-        
+
         mShadowManager.reset(new SceneUtil::ShadowManager(sceneRoot, mRootNode, shadowCastingTraversalMask, indoorShadowCastingTraversalMask, mResourceSystem->getSceneManager()->getShaderManager()));
 
         Shader::ShaderManager::DefineMap shadowDefines = mShadowManager->getShadowDefines();
@@ -1268,6 +1268,10 @@ namespace MWRender
                 updateTextureFiltering();
             else if (it->first == "Water")
                 mWater->processChangedSettings(changed);
+            else if (it->first == "Shadows")
+            {
+                // TODO: rebuild shadow scene here
+            }
         }
     }
 

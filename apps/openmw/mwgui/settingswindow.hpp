@@ -34,6 +34,9 @@ namespace MWGui
 
             MyGUI::ComboBox* mWaterTextureSize;
 
+            MyGUI::ComboBox* mShadowTextureSize;
+            MyGUI::ComboBox* mNumberOfShadowMaps;
+
             // controls
             MyGUI::ScrollView* mControlsBox;
             MyGUI::Button* mResetControlsButton;
@@ -52,6 +55,9 @@ namespace MWGui
             void highlightCurrentResolution();
 
             void onWaterTextureSizeChanged(MyGUI::ComboBox* _sender, size_t pos);
+
+            void onShadowTextureSizeChanged(MyGUI::ComboBox* _sender, size_t pos);
+            void onNumberOfShadowMapsChanged(MyGUI::ComboBox* _sender, size_t pos);
 
             void onRebindAction(MyGUI::Widget* _sender);
             void onInputTabMouseWheel(MyGUI::Widget* _sender, int _rel);

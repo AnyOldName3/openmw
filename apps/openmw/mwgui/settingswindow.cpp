@@ -184,6 +184,8 @@ namespace MWGui
         getWidget(mKeyboardSwitch, "KeyboardButton");
         getWidget(mControllerSwitch, "ControllerButton");
         getWidget(mWaterTextureSize, "WaterTextureSize");
+        getWidget(mShadowTextureSize, "ShadowsTextureSize");
+        getWidget(mNumberOfShadowMaps, "NumberOfShadowMaps");
 
 #ifndef WIN32
         // hide gamma controls since it currently does not work under Linux
@@ -207,6 +209,9 @@ namespace MWGui
         mResolutionList->eventListChangePosition += MyGUI::newDelegate(this, &SettingsWindow::onResolutionSelected);
 
         mWaterTextureSize->eventComboChangePosition += MyGUI::newDelegate(this, &SettingsWindow::onWaterTextureSizeChanged);
+
+        mShadowTextureSize->eventComboChangePosition += MyGUI::newDelegate(this, &SettingsWindow::onShadowTextureSizeChanged);
+        mNumberOfShadowMaps->eventComboChangePosition += MyGUI::newDelegate(this, &SettingsWindow::onNumberOfShadowMapsChanged);
 
         mKeyboardSwitch->eventMouseButtonClick += MyGUI::newDelegate(this, &SettingsWindow::onKeyboardSwitchClicked);
         mControllerSwitch->eventMouseButtonClick += MyGUI::newDelegate(this, &SettingsWindow::onControllerSwitchClicked);
@@ -247,6 +252,19 @@ namespace MWGui
             mWaterTextureSize->setIndexSelected(1);
         if (waterTextureSize >= 2048)
             mWaterTextureSize->setIndexSelected(2);
+
+        int shadowsTextureSize = Settings::Manager::getInt ("shadow map resolution", "Shadows");
+        if (shadowsTextureSize >= 1024)
+            mShadowTextureSize->setIndexSelected(0);
+        if (shadowsTextureSize >= 2048)
+            mShadowTextureSize->setIndexSelected(1);
+        if (shadowsTextureSize >= 4096)
+            mShadowTextureSize->setIndexSelected(2);
+        if (shadowsTextureSize >= 8192)
+            mShadowTextureSize->setIndexSelected(3);
+
+        int numberOfShadowMaps = Settings::Manager::getInt ("number of shadow maps", "Shadows");
+        mNumberOfShadowMaps->setIndexSelected(numberOfShadowMaps-1);
 
         mWindowBorderButton->setEnabled(!Settings::Manager::getBool("fullscreen", "Video"));
 
@@ -324,6 +342,27 @@ namespace MWGui
         else if (pos == 2)
             size = 2048;
         Settings::Manager::setInt("rtt size", "Water", size);
+        apply();
+    }
+
+    void SettingsWindow::onShadowTextureSizeChanged(MyGUI::ComboBox* _sender, size_t pos)
+    {
+        int size = 0;
+        if (pos == 0)
+            size = 1024;
+        else if (pos == 1)
+            size = 2048;
+        else if (pos == 2)
+            size = 4096;
+        else if (pos == 3)
+            size = 8192;
+        Settings::Manager::setInt("shadow map resolution", "Shadows", size);
+        apply();
+    }
+
+    void SettingsWindow::onNumberOfShadowMapsChanged(MyGUI::ComboBox* _sender, size_t pos)
+    {
+        Settings::Manager::setInt("number of shadow maps", "Shadows", pos+1);
         apply();
     }
 
