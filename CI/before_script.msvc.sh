@@ -713,9 +713,7 @@ printf "Boost ${BOOST_VER}... "
 			"${DEPS}/boost-${BOOST_VER}-msvc${MSVC_VER}-win${BITS}.exe" //DIR="${CWD_DRIVE_ROOT}" //VERYSILENT //NORESTART ${CI_EXTRA_INNO_OPTIONS}
 			mv "${CWD_DRIVE_ROOT_BASH}" "${BOOST_SDK}"
 		fi
-		add_cmake_opts -DBOOST_ROOT="$BOOST_SDK" \
-			-DBOOST_LIBRARYDIR="${BOOST_SDK}/lib${BITS}-msvc-${MSVC_VER}"
-		add_cmake_opts -DBoost_COMPILER="-${TOOLSET}"
+		BOOST_PREFIX="${BOOST_SDK}/lib${BITS}-msvc-${MSVC_VER}/cmake/Boost-1.80.0"
 		echo Done.
 }
 cd $DEPS
@@ -1028,7 +1026,7 @@ printf "zlib 1.2.11... "
 	echo Done.
 }
 
-add_cmake_opts -DCMAKE_PREFIX_PATH="\"${QT_SDK};${SDL2DIR}\""
+add_cmake_opts -DCMAKE_PREFIX_PATH="\"${QT_SDK};${SDL2DIR};${BOOST_PREFIX}\""
 
 echo
 cd $DEPS_INSTALL/..
