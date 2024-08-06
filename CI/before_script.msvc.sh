@@ -44,7 +44,6 @@ function unixPathAsWindows {
 	fi
 }
 
-APPVEYOR=${APPVEYOR:-}
 CI=${CI:-}
 STEP=${STEP:-}
 
@@ -211,16 +210,8 @@ if [ -z $VERBOSE ]; then
 	STRIP="> /dev/null 2>&1"
 fi
 
-if [ -z $APPVEYOR ]; then
-	echo "Running prebuild outside of Appveyor."
-
-	DIR=$(windowsPathAsUnix "${BASH_SOURCE[0]}")
-	cd $(dirname "$DIR")/..
-else
-	echo "Running prebuild in Appveyor."
-
-	cd "$APPVEYOR_BUILD_FOLDER"
-fi
+DIR=$(windowsPathAsUnix "${BASH_SOURCE[0]}")
+cd $(dirname "$DIR")/..
 
 run_cmd() {
 	CMD="$1"
@@ -231,13 +222,7 @@ run_cmd() {
 		eval $CMD $@ > output.log 2>&1 || RET=$?
 
 		if [ $RET -ne 0 ]; then
-			if [ -z $APPVEYOR ]; then
-				echo "Command $CMD failed, output can be found in $(real_pwd)/output.log"
-			else
-				echo
-				echo "Command $CMD failed;"
-				cat output.log
-			fi
+			echo "Command $CMD failed, output can be found in $(real_pwd)/output.log"
 		else
 			rm output.log
 		fi
@@ -591,7 +576,6 @@ echo "Starting prebuild on MSVC${MSVC_DISPLAY_YEAR} WIN${BITS}"
 echo "==================================="
 echo
 
-# cd OpenMW/AppVeyor-test
 mkdir -p deps
 cd deps
 
@@ -602,11 +586,9 @@ if [ -z $SKIP_DOWNLOAD ]; then
 	echo
 
 	# Boost
-	if [ -z $APPVEYOR ]; then
-		download "Boost ${BOOST_VER}" \
-			"https://gitlab.com/OpenMW/openmw-deps/-/raw/main/windows/boost_${BOOST_VER_URL}-msvc-${MSVC_VER}-${BITS}.exe" \
-			"boost-${BOOST_VER}-msvc${MSVC_VER}-win${BITS}.exe"
-	fi
+	download "Boost ${BOOST_VER}" \
+		"https://gitlab.com/OpenMW/openmw-deps/-/raw/main/windows/boost_${BOOST_VER_URL}-msvc-${MSVC_VER}-${BITS}.exe" \
+		"boost-${BOOST_VER}-msvc${MSVC_VER}-win${BITS}.exe"
 
 	# Bullet
 	download "Bullet ${BULLET_VER}" \
@@ -706,13 +688,8 @@ echo "---------------------------------------------------"
 echo
 
 
-if [ -z $APPVEYOR ]; then
-	printf "Boost ${BOOST_VER}... "
-else
-	printf "Boost ${BOOST_VER} AppVeyor... "
-fi
+printf "Boost ${BOOST_VER}... "
 {
-	if [ -z $APPVEYOR ]; then
 		cd $DEPS_INSTALL
 
 		BOOST_SDK="$(real_pwd)/Boost"
@@ -740,16 +717,6 @@ fi
 			-DBOOST_LIBRARYDIR="${BOOST_SDK}/lib${BITS}-msvc-${MSVC_VER}"
 		add_cmake_opts -DBoost_COMPILER="-${TOOLSET}"
 		echo Done.
-	else
-		# Appveyor has all the boost we need already
-		BOOST_SDK="c:/Libraries/boost_${BOOST_VER_URL}"
-
-		add_cmake_opts -DBOOST_ROOT="$BOOST_SDK" \
-			-DBOOST_LIBRARYDIR="${BOOST_SDK}/lib${BITS}-msvc-${MSVC_VER}.1"
-		add_cmake_opts -DBoost_COMPILER="-${TOOLSET}"
-
-		echo Done.
-	fi
 }
 cd $DEPS
 echo
